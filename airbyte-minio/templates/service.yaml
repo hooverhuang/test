@@ -1,0 +1,41 @@
+{{ $scheme := or .Values.tls.enabled .Values.selfsigned.enabled | ternary "https" "http" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ if .Values.api.service.name }}{{ .Values.api.service.name }}{{ else}}{{ printf "%s" (tpl "minio.fullname" .) }}{{ end }}
+  labels: 
+    eonkube: airbytechart
+    {{- include "minio.standard.labels" . | nindent 4 }}
+    monitoring: "true"
+  {{- if .Values.api.service.annotations }}
+  annotations: {{- toYaml .Values.api.service.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if (or (eq .Values.api.service.type "ClusterIP" "") (empty .Values.api.service.type)) }}
+  type: ClusterIP
+  {{- if not (empty .Values.api.service.clusterIP) }}
+  clusterIP: {{ .Values.api.service.clusterIP }}
+  {{- end }}
+  {{- else if eq .Values.api.service.type "LoadBalancer" }}
+  type: {{ .Values.api.service.type }}
+  loadBalancerIP: {{ default "" .Values.api.service.loadBalancerIP }}
+  {{- else }}
+  type: {{ .Values.api.service.type }}
+  {{- end }}
+  ports:
+    - name: {{ $scheme }}
+      port: {{ .Values.api.service.port }}
+      protocol: TCP
+      {{- if (and (eq .Values.api.service.type "NodePort") ( .Values.api.service.nodePort)) }}
+      nodePort: {{ .Values.api.service.nodePort }}
+      {{- else }}
+      targetPort: {{ .Values.minioAPIPort }}
+      {{- end }}
+  {{- if .Values.api.service.externalIPs }}
+  externalIPs:
+    {{- range $i , $ip := .Values.api.service.externalIPs }}
+    - {{ $ip }}
+    {{- end }}
+  {{- end }}
+  selector:
+    {{- include "minio.selector.labels" . | nindent 4 }}

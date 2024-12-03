@@ -1,0 +1,13 @@
+apiVersion: v2
+appVersion: 0.43.0
+dependencies:
+- name: common
+  repository: '@infortrend'
+  tags:
+  - bitnami-common
+  version: 2.2.4
+deprecated: true
+description: Helm chart to deploy airbyte-webapp
+name: webapp
+type: application
+version: 0.45.12

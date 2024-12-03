@@ -1,0 +1,62 @@
+annotations:
+  catalog.cattle.io/display-name: Airbyte
+apiVersion: v2
+appVersion: 0.43.0
+dependencies:
+- name: common
+  repository: '@infortrend'
+  tags:
+  - bitnami-common
+  version: 2.2.4
+- condition: airbyte-bootloader.enabled
+  name: airbyte-bootloader
+  repository: '@infortrend'
+  version: 0.45.12
+- condition: temporal.enabled
+  name: temporal
+  repository: '@infortrend'
+  version: 0.45.12
+- condition: webapp.enabled
+  name: webapp
+  repository: '@infortrend'
+  version: 0.45.12
+- condition: server.enabled
+  name: server
+  repository: '@infortrend'
+  version: 0.45.12
+- condition: worker.enabled
+  name: worker
+  repository: '@infortrend'
+  version: 0.45.12
+- condition: pod-sweeper.enabled
+  name: pod-sweeper
+  repository: '@infortrend'
+  version: 0.45.12
+- condition: metrics.enabled
+  name: metrics
+  repository: '@infortrend'
+  version: 0.45.12
+- condition: cron.enabled
+  name: cron
+  repository: '@infortrend'
+  version: 0.45.12
+- condition: connector-builder-server.enabled
+  name: connector-builder-server
+  repository: '@infortrend'
+  version: 0.45.12
+- condition: postgresql.enabled
+  name: postgresql
+  repository: '@infortrend'
+  version: 1.0.14+up14.2
+- condition: minio.enabled
+  name: minio
+  repository: '@infortrend'
+  version: 1.0.2+upRELEASE.2023-09-30T07-02-29Z
+description: Airbyte is an open-source data integration engine.
+icon: http://charts.infortrend.com:8080/data/airbyte.png
+keywords:
+- E-Commerce & Retail
+- Business Apps
+name: airbytechart
+type: application
+version: 1.0.9+up0.43.0

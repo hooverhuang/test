@@ -1,0 +1,14 @@
+{{- $api_tls := and .Values.api.ingress.enabled .Values.api.ingress.tls.defaultSelfSignedCert -}}
+{{- $console_tls := and .Values.console.ingress.enabled .Values.console.ingress.tls.defaultSelfSignedCert -}}
+{{- if or .Values.selfsigned.enabled $api_tls $console_tls }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: minio-selfsigned-ca-issuer
+  namespace: {{ .Release.Namespace }}
+  labels:
+    eonkube: airbytechart
+    {{- include "minio.standard.labels" . | nindent 4 }}
+spec:
+    selfSigned: {}
+{{- end }}

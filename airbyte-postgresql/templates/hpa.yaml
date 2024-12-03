@@ -1,0 +1,29 @@
+{{- if .Values.postgresql.autoscaling.enabled }}
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "postgresql.fullname" . }}
+  labels:
+    eonkube: airbytechart
+    {{- include "postgresql.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "postgresql.fullname" . }}
+  minReplicas: {{ .Values.postgresql.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.postgresql.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.postgresql.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: {{ .Values.postgresql.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.postgresql.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        targetAverageUtilization: {{ .Values.postgresql.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

@@ -1,0 +1,212 @@
+#
+# All default values of the variables are set in the values.yaml
+# Author: Hamilton.Chang@infortrend.com
+#
+
+questions:
+## General
+#- variable: replicaCount
+#  type: int
+#  min: 1
+#  max: 3
+#  description: "Replicas number of App Application."
+#  label: App replicas 
+#  group: "General"
+
+- variable: resources.requests.cpu
+  type: string
+  label: CPU Minimum Require
+  group: "General"
+
+- variable: resources.limits.cpu
+  type: string
+  label: CPU Upper Limit
+  group: "General"
+
+- variable: resources.requests.memory
+  type: string
+  label: Memory Minimum Require
+  group: "General"
+
+- variable: resources.limits.memory
+  type: string
+  label: Memory Upper Limit
+  group: "General"
+
+## Storage
+- variable: storageDefaultSetting
+  type: boolean
+  label: Use Default Storage Class
+  group: "Storage"
+  show_subquestion_if: false
+  subquestions:
+  - variable: persistence.storageClass
+    type: storageclass
+    label: StorageClass for Database
+    show_if: "storageDefaultSetting=false"
+    group: "Storage"
+
+- variable: persistence.size
+  type: string
+  description: "Specify a size for PVC creating from the StorageClass."
+  label: Database Storage Size
+  group: "Storage"
+
+
+## Service
+- variable: console.service.name
+  type: string
+  label: App Service name
+  group: "Service"
+
+- variable: console.service.type
+  label: App Image Service Type
+  group: "Service"
+  required: true
+  type: enum
+  options:
+  - "LoadBalancer"
+  - "NodePort"
+
+- variable: console.service.loadBalancerIP
+  type: string
+  description: "Set load balancer static IP for service, IP should be within VIP address pool."
+  label: Static Virtual IP
+  show_if: "console.service.type=LoadBalancer "
+  required: true
+  group: "Service"
+
+- variable: console.service.nodePort
+  type: int
+  min: 30000
+  max: 32767
+  description: "Specify App NodePort Number (30000-32767)."
+  label: App NodePort Number
+  show_if: "console.service.type=NodePort"
+  group: "Service"
+  ## api service
+- variable: api.service.type
+  label: MinIO api Service Type
+  group: "Service"
+  required: true
+  type: enum
+  options:
+  - "LoadBalancer"
+  - "NodePort"
+
+- variable: api.service.loadBalancerIP
+  type: string
+  description: "Set load balancer static IP for service, IP should be within VIP address pool."
+  label: Static Virtual IP for MinIO api
+  show_if: "api.service.type=LoadBalancer "
+  required: true
+  group: "Service"
+
+- variable: api.service.nodePort
+  type: int
+  min: 30000
+  max: 32767
+  description: "Specify MinIO api NodePort Number (30000-32767)."
+  label: MinIO api NodePort Number
+  show_if: "api.service.type=NodePort"
+  group: "Service"
+
+- variable:  console.service.vipSharingEnabled
+  type: boolean
+  description: "Let Virtual IP can be reused."
+  label: Enable Virtual IP Sharing
+  show_if: "console.service.type=LoadBalancer"
+  group: "Service"
+
+- variable:  console.service.advancedsetting
+  type: boolean
+  label: Show Advanced Service Settings
+  group: "Service"
+  show_subquestion_if: true
+  subquestions:
+
+  - variable:  console.service.dnsEnabled
+    type: boolean
+    label: Enable Domain name
+    group: "Service"
+    show_subquestion_if: true
+    subquestions:
+    - variable:  console.service.hostname
+      type: string
+      label: Domain name
+      group: Service
+
+  - variable: console.ingress.enabled
+    type: boolean
+    label: Expose app using ingress
+    group: "Service"
+    show_subquestion_if: true
+    subquestions:
+    - variable: console.ingress.hosts.host
+      label: MinIO console Web URL
+      type: string
+      group: "Service"
+      required: true
+      show_if: "console.ingress.enabled=true"
+      description: "URL to connect to Redmine Web."
+  - variable: api.ingress.enabled
+    type: boolean
+    label: Expose MinIO api using ingress
+    group: "Service"
+    show_subquestion_if: true
+    subquestions:
+    - variable: api.ingress.hosts.host
+      label: MinIO MinIO api URL
+      type: string
+      group: "Service"
+      required: true
+      show_if: "api.ingress.enabled=true"
+      description: "URL to connect to Redmine Web."
+
+## APP setting
+- variable: advancedDefaultSetting
+  type: boolean
+  label: Show Advanced APP Settings
+  group: "APP setting"
+  show_subquestion_if: true
+  subquestions:
+  #- variable: mode
+  #  type: enum
+  #  label: minio mode 
+  #  group: "APP setting" 
+  #  options:
+  #  - "standalone"
+  #  - "distributed"
+  
+  - variable: rootUser
+    type: string
+    label: Console user 
+    group: "APP setting"
+    required: true
+  
+  - variable: rootPassword
+    type: string
+    description: "at least 8 chars"
+    min_length: 8
+    label: Console Password 
+    group: "APP setting"
+    required: true
+  
+  - variable: defaulSetting.bucket.name
+    type: string
+    label: Default Bucket Name 
+    group: "APP setting"
+    required: true
+  
+  - variable: api.ingress.tls.defaultSelfSignedCert
+    type: boolean
+    label: MinIO api Ingress with default TLS cert. 
+    group: "APP setting"
+    show_if: "api.ingress.enabled=true"
+
+  - variable: console.ingress.tls.defaultSelfSignedCert
+    type: boolean
+    label: MinIO console Ingress with default TLS cert. 
+    group: "APP setting"
+    show_if: "console.ingress.enabled=true"
+  

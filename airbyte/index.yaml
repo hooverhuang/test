@@ -1,0 +1,228 @@
+apiVersion: v1
+entries:
+  airbyte-bootloader:
+  - apiVersion: v2
+    appVersion: 0.43.0
+    created: "2024-10-24T15:31:48.162662299+08:00"
+    dependencies:
+    - name: common
+      repository: '@infortrend'
+      tags:
+      - bitnami-common
+      version: 2.2.4
+    deprecated: true
+    description: Helm chart to deploy airbyte-bootloader
+    digest: a081bf0c8fe5989b972731d0ec266d95d0b3d06e85fb1fd2d4ee0ce7915d3000
+    name: airbyte-bootloader
+    type: application
+    urls:
+    - charts/airbyte-bootloader-0.45.12.tgz
+    version: 0.45.12
+  common:
+  - annotations:
+      category: Infrastructure
+      licenses: Apache-2.0
+    apiVersion: v2
+    appVersion: 2.2.4
+    created: "2024-10-24T15:31:48.170106393+08:00"
+    deprecated: true
+    description: A Library Helm Chart for grouping common logic between bitnami charts.
+      This chart is not deployable by itself.
+    digest: 69da7829c179d592df95512f1ff8e922e43c0fa1d9a674f2f0d06dad149855d4
+    home: https://github.com/bitnami/charts/tree/main/bitnami/common
+    icon: https://bitnami.com/downloads/logos/bitnami-mark.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    - bitnami
+    maintainers:
+    - name: Bitnami
+      url: https://github.com/bitnami/charts
+    name: common
+    sources:
+    - https://github.com/bitnami/charts
+    - https://www.bitnami.com/
+    type: library
+    urls:
+    - charts/common-2.2.4.tgz
+    version: 2.2.4
+  connector-builder-server:
+  - apiVersion: v2
+    appVersion: 0.43.0
+    created: "2024-10-24T15:31:48.177079349+08:00"
+    dependencies:
+    - name: common
+      repository: '@infortrend'
+      tags:
+      - bitnami-common
+      version: 2.2.4
+    deprecated: true
+    description: Helm chart to deploy airbyte-connector-builder-server
+    digest: 0cd9ab646540e1046cbe5247c39892e9d72579e46f6be1a2638fd2f250d992a9
+    name: connector-builder-server
+    type: application
+    urls:
+    - charts/connector-builder-server-0.45.12.tgz
+    version: 0.45.12
+  cron:
+  - apiVersion: v2
+    appVersion: 0.43.0
+    created: "2024-10-24T15:31:48.178952241+08:00"
+    dependencies:
+    - name: common
+      repository: '@infortrend'
+      tags:
+      - bitnami-common
+      version: 2.2.4
+    deprecated: true
+    description: Helm chart to deploy airbyte-cron
+    digest: 9421e77dd3fe569a7f8bf818e8bf69ca1b3d1e911548c24112bcd56fed5feb2b
+    name: cron
+    type: application
+    urls:
+    - charts/cron-0.45.12.tgz
+    version: 0.45.12
+  metrics:
+  - apiVersion: v2
+    appVersion: 0.40.3
+    created: "2024-10-24T15:31:48.181879969+08:00"
+    dependencies:
+    - name: common
+      repository: '@infortrend'
+      tags:
+      - bitnami-common
+      version: 2.2.4
+    deprecated: true
+    description: Helm chart to deploy airbyte-metrics
+    digest: a23597712cfc84164507736519cffe5a5e5311afa8ab64916855033adb5bc6db
+    name: metrics
+    type: application
+    urls:
+    - charts/metrics-0.45.12.tgz
+    version: 0.45.12
+  minio:
+  - annotations:
+      catalog.cattle.io/display-name: MinIO
+    apiVersion: v1
+    appVersion: RELEASE.2023-09-30T07-02-29Z
+    created: "2024-10-24T15:31:48.188275582+08:00"
+    description: MinIO is an open-source object storage server compatible with the
+      Amazon
+    digest: 3fd299f81bd56954dc30e988d9ee67f0895e638b47d9d8d3816a8560a4fc932d
+    icon: http://charts.infortrend.com:8080/data/minio.png
+    keywords:
+    - Database
+    name: minio
+    urls:
+    - charts/minio-1.0.2+upRELEASE.2023-09-30T07-02-29Z.tgz
+    version: 1.0.2+upRELEASE.2023-09-30T07-02-29Z
+  pod-sweeper:
+  - apiVersion: v2
+    appVersion: 0.39.37-alpha
+    created: "2024-10-24T15:31:48.207257115+08:00"
+    dependencies:
+    - name: common
+      repository: '@infortrend'
+      tags:
+      - bitnami-common
+      version: 2.2.4
+    deprecated: true
+    description: Helm chart to deploy airbyte-pod-sweeper
+    digest: 08ecb164f3f2fe61035f69daab4f054405d71977a088edb2f26622200517c5e3
+    name: pod-sweeper
+    type: application
+    urls:
+    - charts/pod-sweeper-0.45.12.tgz
+    version: 0.45.12
+  postgresql:
+  - annotations:
+      catalog.cattle.io/display-name: PostgreSQL
+    apiVersion: v2
+    appVersion: "14.2"
+    created: "2024-10-24T15:31:48.209645663+08:00"
+    description: PostgreSQL is an relational database management system known for
+      its advanced features, scalability, and strong data integrity.
+    digest: 261fa0324f9fa4a227695622385fcca062bc5e5e53eeb1783e58d372035032c4
+    icon: http://charts.infortrend.com:8080/data/postgresql.png
+    keywords:
+    - Database
+    name: postgresql
+    type: application
+    urls:
+    - charts/postgresql-1.0.14+up14.2.tgz
+    version: 1.0.14+up14.2
+  server:
+  - apiVersion: v2
+    appVersion: 0.43.0
+    created: "2024-10-24T15:31:48.214079824+08:00"
+    dependencies:
+    - name: common
+      repository: '@infortrend'
+      tags:
+      - bitnami-common
+      version: 2.2.4
+    deprecated: true
+    description: Helm chart to deploy airbyte-server
+    digest: 2c3d4d8eeeec3f18d7005430d5b7fdea9d0b2bb9c9d28a09013c99919b179ce4
+    name: server
+    type: application
+    urls:
+    - charts/server-0.45.12.tgz
+    version: 0.45.12
+  temporal:
+  - apiVersion: v2
+    appVersion: 0.43.0
+    created: "2024-10-24T15:31:48.215750434+08:00"
+    dependencies:
+    - name: common
+      repository: '@infortrend'
+      tags:
+      - bitnami-common
+      version: 2.2.4
+    deprecated: true
+    description: Helm chart to deploy airbyte-temporal
+    digest: a5f3043b7e65e66e18508acbabbbb96d531f90d2289ac29010d92dbce16ad012
+    name: temporal
+    type: application
+    urls:
+    - charts/temporal-0.45.12.tgz
+    version: 0.45.12
+  webapp:
+  - apiVersion: v2
+    appVersion: 0.43.0
+    created: "2024-10-24T15:31:48.228152224+08:00"
+    dependencies:
+    - name: common
+      repository: '@infortrend'
+      tags:
+      - bitnami-common
+      version: 2.2.4
+    deprecated: true
+    description: Helm chart to deploy airbyte-webapp
+    digest: 02d85ce8907aa91d790f41641aeeb672d82bdd93f17468e796d6c240e681d9bf
+    name: webapp
+    type: application
+    urls:
+    - charts/webapp-0.45.12.tgz
+    version: 0.45.12
+  worker:
+  - apiVersion: v2
+    appVersion: 0.43.0
+    created: "2024-10-24T15:31:48.230082408+08:00"
+    dependencies:
+    - name: common
+      repository: '@infortrend'
+      tags:
+      - bitnami-common
+      version: 2.2.4
+    deprecated: true
+    description: Helm chart to deploy airbyte-worker
+    digest: d40c1f943256645f55ed529a045f75360f5800eb8d972465527845cae548b2e8
+    name: worker
+    type: application
+    urls:
+    - charts/worker-0.45.12.tgz
+    version: 0.45.12
+generated: "2024-10-24T15:31:48.146704413+08:00"

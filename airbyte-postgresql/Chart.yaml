@@ -1,0 +1,12 @@
+annotations:
+  catalog.cattle.io/display-name: PostgreSQL
+apiVersion: v2
+appVersion: "14.2"
+description: PostgreSQL is an relational database management system known for its
+  advanced features, scalability, and strong data integrity.
+icon: http://charts.infortrend.com:8080/data/postgresql.png
+keywords:
+- SQL DB
+name: postgresql
+type: application
+version: 1.0.9

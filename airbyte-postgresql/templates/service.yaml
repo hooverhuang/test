@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ if .Values.postgresql.service.name }}{{ .Values.postgresql.service.name }}{{ else }}{{ include "postgresql.fullname" . }}{{ end }}
+  labels:
+    eonkube: airbytechart
+    {{- include "postgresql.labels" . | nindent 4 }}
+  annotations:
+    {{- range $key, $value := .Values.postgresql.service.annotations }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+    {{ if and .Values.postgresql.service.vipSharingEnabled .Values.postgresql.service.loadbalancerip }}metallb.universe.tf/allow-shared-ip: {{ printf "key-to-share-%s" .Values.postgresql.service.loadbalancerip | quote }}{{ end }}    
+    {{ if .Values.postgresql.service.dnsEnabled }}external-dns.alpha.kubernetes.io/hostname: {{ .Values.postgresql.service.hostname | quote }}{{ end }}
+spec:
+  type: {{ .Values.postgresql.service.type }}
+  {{ if eq .Values.postgresql.service.type "ClusterIP" }}clusterIP: {{ .Values.postgresql.service.clusterIP }}{{ end }}
+  {{ if eq .Values.postgresql.service.type "LoadBalancer" }}loadBalancerIP: {{ .Values.postgresql.service.loadbalancerip  }}{{ end }}
+  # {{ if eq .Values.postgresql.service.type "NodePort" }}externalTrafficPolicy: {{ .Values.postgresql.service.externalTrafficPolicy }}{{ end }}
+  ports:
+    - port: {{ .Values.postgresql.service.port }}
+      targetPort: {{ .Values.postgresql.service.targetPort }}
+      {{ if eq .Values.postgresql.service.type "NodePort" }}nodePort: {{ .Values.postgresql.service.nodePort }}{{ end }}
+      protocol: {{ .Values.postgresql.service.protocol }}
+      name: {{ .Values.postgresql.service.portname }}
+  selector:
+    {{- include "postgresql.selectorLabels" . | nindent 4 }}

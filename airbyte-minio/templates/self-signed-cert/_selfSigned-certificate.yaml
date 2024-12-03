@@ -1,0 +1,27 @@
+{{- $api_tls := and .Values.api.ingress.enabled .Values.api.ingress.tls.defaultSelfSignedCert -}}
+{{- $console_tls := and .Values.console.ingress.enabled .Values.console.ingress.tls.defaultSelfSignedCert -}}
+{{- if or .Values.selfsigned.enabled $api_tls $console_tls }}
+{{- $secretCA := default "minio-selfsigned-ca-secret" .Values.selfsigned.trustedCertsSecret -}}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: minio-selfsigned-ca
+  namespace: {{ .Release.Namespace }}
+  labels:
+    eonkube: airbytechart
+    {{- include "minio.standard.labels" . | nindent 4 }}
+spec:
+  isCA: true
+  commonName: {{ .Release.Name }}
+  subject:
+    organizations:
+      - ACME Inc.
+  secretName: {{ $secretCA }}
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: minio-selfsigned-ca-issuer
+    kind: Issuer
+    group: cert-manager.io
+{{- end }}

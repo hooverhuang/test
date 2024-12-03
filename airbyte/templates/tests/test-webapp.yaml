@@ -1,0 +1,19 @@
+---
+{{- $svc_default := printf "%s-airbyte-webapp-svc" .Release.Name -}}
+{{- $svc_name :=default .Values.webapp.service.name $svc_default -}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "common.names.fullname" . }}-test-connection"
+  labels:
+    eonkube: airbytechart
+    {{- include "airbyte.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+  - name: wget
+    image: busybox
+    command: ['wget']
+    args: ['{{ $svc_name }}:{{ .Values.webapp.service.port }}']
+  restartPolicy: Never

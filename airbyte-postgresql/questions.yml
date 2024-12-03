@@ -1,0 +1,225 @@
+#
+# All default values of the variables are set in the values.yaml
+# Author: Hamilton.Chang@infortrend.com
+#
+
+questions:
+
+- variable: postgresql.resources.requests.cpu
+  type: string
+  label: CPU Minimum Require
+  group: "General"
+
+- variable: postgresql.resources.limits.cpu
+  type: string
+  label: CPU Upper Limit
+  group: "General"
+
+- variable: postgresql.resources.requests.memory
+  type: string
+  label: Memory Minimum Require
+  group: "General"
+
+- variable: postgresql.resources.limits.memory
+  type: string
+  label: Memory Upper Limit
+  group: "General"
+
+
+
+- variable: storageDefaultSetting
+  type: boolean
+  label: Use Default Storage Class
+  group: "Storage"
+  show_subquestion_if: false
+  subquestions:
+  - variable: postgresql.volumeClaimTemplates.data.storageClassName
+    type: storageclass
+    label: StorageClass for Database
+    show_if: "storageDefaultSetting=false"
+    group: "Storage"
+
+- variable: postgresql.volumeClaimTemplates.data.storageSize
+  type: string
+  description: "Specify a size for PVC creating from the StorageClass."
+  label: Database Storage Size
+  group: "Storage"
+
+
+
+
+# - variable: env[1].name
+#   type: string
+#   default: "REDMINE_DB_USERNAME"
+#   description: "Specify PostgreSQL username key for Redmine"
+#   label: "PostgreSQL Username key"
+#   group: "General"
+# - variable: env[1].value
+#   type: string
+#   default: "redmine"
+#   description: "Specify PostgreSQL username value for Redmine"
+#   label: "PostgreSQL Username value"
+#   show_if: "env[1].value=redmine"
+#   group: "General"
+# - variable: image.defaultImage
+#   default: "true"
+#   description: "Use default Redmine images"
+#   label: Use Default Images
+#   type: boolean
+#   show_subquestion_if: false
+#   group: "Images"
+#   subquestions:
+#   - variable: image.repository
+#     default: redmine
+#     description: "Specify Redmine Image Repository"
+#     type: string
+#     label: Redmine Image Repository
+#     group: "Images Settings"
+#   - variable: image.pullPolicy
+#     label: Redmine Image Repository PullPolicy
+#     group: "Images Settings"
+#     description: "Specify Redmine Image Repository PullPolicy"
+#     required: true
+#     type: enum
+#     options:
+#     - "IfNotPresent"
+#     - "Always"
+#     - "Never"
+#     default: "IfNotPresents"
+#   - variable: image.tag
+#     default: 5.0-alpine3.15
+#     description: "Specify Redmine Image Repository Tag"
+#     type: string
+#     label: Redmine Image Repository Tag
+#     group: "Images Settings"
+# - variable: image.repository
+#   default: redmine
+#   description: "Specify Redmine Image Repository"
+#   type: string
+#   label: Redmine Image Repository
+#   group: "Images"
+
+  # default: "5.0-alpine3.15"
+# - variable: service.defaultService
+#   default: "true"
+#   description: "Use default service"
+#   label: Use Default Service
+#   type: boolean
+#   show_subquestion_if: false
+#   group: "Service"
+#   subquestions:
+#   - variable: service.type
+#     label: Redmine Image Service Type
+#     group: "Service Settings"
+#     description: "Specify Redmine Image Service Type"
+#     required: true
+#     type: enum
+#     options:
+#     - "LoadBalancer"
+#     - "NodePort"
+#     default: "LoadBalancer"
+#     show_subquestion_if: "NodePort"
+#     subquestions:
+#     - variable: service.nodePort
+#       label: Redmine NodePort Number
+#       group: "Service Settings"
+#       description: "Specify Redmine NodePort Number (30000-32767)"
+#       type: int
+#       default: 30060 # showing on GUI is 3000
+#       min: 30000
+#       max: 32767
+#   - variable: service.name
+#     default: redmine
+#     description: "Specify Redmine Service name"
+#     type: string
+#     label: Redmine Service name
+#     group: "Service Settings"
+
+- variable: postgresql.service.name
+  type: string
+  label: App Service name
+  group: "Service"
+
+- variable: postgresql.service.type
+  label: App Image Service Type
+  group: "Service"
+  required: true
+  type: enum
+  options:
+  - "LoadBalancer"
+  - "NodePort"
+  - "ClusterIP"
+
+- variable: postgresql.service.loadbalancerip
+  type: string
+  description: "Set load balancer static IP for service, IP should be within VIP address pool."
+  label: Static Virtual IP
+  show_if: "postgresql.service.type=LoadBalancer "
+  required: true
+  group: "Service"
+
+- variable: postgresql.service.nodePort
+  type: int
+  min: 30000
+  max: 32767
+  description: "Specify App NodePort Number (30000-32767)."
+  label: App NodePort Number
+  show_if: "postgresql.service.type=NodePort"
+  group: "Service"
+
+- variable: postgresql.service.vipSharingEnabled
+  type: boolean
+  description: "Let Virtual IP can be reused."
+  label: Enable Virtual IP Sharing
+  show_if: "postgresql.service.type=LoadBalancer"
+  group: "Service"
+
+- variable: postgresql.service.advancedsetting
+  type: boolean
+  label: Show Advanced Service Settings
+  group: "Service"
+  show_subquestion_if: true
+  subquestions:
+
+  - variable: postgresql.service.dnsEnabled
+    type: boolean
+    label: Enable Domain name
+    group: "Service"
+    show_subquestion_if: true
+    subquestions:
+    - variable: postgresql.service.hostname
+      type: string
+      label: Domain name
+      group: Service
+
+# - variable: ingress.enabled
+#   type: boolean
+#   label: Expose app using ingress
+#   group: "Service"
+#   show_subquestion_if: true
+#   subquestions:
+#   - variable: ingress.hosts.host
+#     label: Redmine Web URL
+#     type: string
+#     group: "Service"
+#     required: true
+#     show_if: "ingress.enabled=true"
+#     description: "URL to connect to Redmine Web."
+
+  # show_subquestion_if: true
+  # subquestions:
+  # - variable: service.SharedIP
+  #   type: string
+  #   description: "Set Shared Virtual IP"
+  #   label: Shared Virtual IP
+  #   group: Service
+- variable: advancedDefaultSetting
+  type: boolean
+  label: Show Advanced APP Settings
+  group: "APP setting"
+  show_subquestion_if: true
+  subquestions:
+  - variable: postgresql.env
+    type: env
+    label: env
+    group: "APP setting"

@@ -1,0 +1,99 @@
+{{- if eq .Values.postgresql.service.type "LoadBalancer" }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    eonkube: airbytechart
+    app: lbchecker
+  #namespace: lbchecker   # should not set namespace in the helm chart
+  name: lbchecker-sa
+  annotations:
+    "helm.sh/hook": pre-rollback
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  labels:
+    eonkube: airbytechart
+    app: lbchecker
+  #namespace: lbchecker   # should not set namespace in the helm chart
+  name: lbchecker-cr
+  annotations:
+    "helm.sh/hook": pre-rollback
+    "helm.sh/hook-weight": "-4"
+    "helm.sh/hook-delete-policy": before-hook-creation
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["services"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    eonkube: airbytechart
+    app: lbchecker
+  #namespace: lbchecker   # should not set namespace in the helm chart
+  name: lbchecker-crb
+  annotations:
+    "helm.sh/hook": pre-rollback
+    "helm.sh/hook-weight": "-3"
+    "helm.sh/hook-delete-policy": before-hook-creation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: lbchecker-cr
+subjects:
+- kind: ServiceAccount
+  name: lbchecker-sa
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name:  {{ .Release.Name }}-pre-rollback
+  labels:
+    eonkube: airbytechart
+    {{- include "postgresql.labels" . |nindent 4}}
+  annotations:
+    "helm.sh/hook": pre-rollback
+    "helm.sh/hook-weight": "-2"
+    #helm.sh/hook-delete-policy": hook-succeeded
+    "helm.sh/hook-delete-policy": before-hook-creation
+    #"helm.sh/resource-policy": keep
+spec:
+  ttlSecondsAfterFinished: 100
+  template:
+    metadata:
+      name: "{{ .Release.Name }}"
+      labels:
+        eonkube: airbytechart
+        app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+        app.kubernetes.io/instance: {{ .Release.Name | quote }}
+        helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    spec:
+      #hostNetwork: true
+      restartPolicy: Never
+      serviceAccountName: lbchecker-sa
+      containers:
+      - name: pre-rollback-job
+        image: {{ .Values.hooks.image }}
+        imagePullPolicy: {{ .Values.hooks.imagePullPolicy }}
+        {{- if .Values.postgresql.service.vipSharingEnabled }}
+        command: ["/usr/local/bin/lbchecker","--vip","{{ .Values.postgresql.service.loadbalancerip }}","--sharekey","True"]
+        {{- else }}
+        command: ["/usr/local/bin/lbchecker","--vip","{{ .Values.postgresql.service.loadbalancerip }}","--sharekey","False"]
+        {{- end }}
+        tty: true
+        securityContext:
+          runAsUser: 0
+          #privileged: true
+  backoffLimit: 2
+  #activeDeadlineSeconds: 20
+{{- end }}

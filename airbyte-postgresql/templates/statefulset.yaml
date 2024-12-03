@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "postgresql.fullname" . }}
+  labels:
+    eonkube: airbytechart
+    {{- include "postgresql.labels" . | nindent 4 }}
+  {{- with .Values.postgresql.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  serviceName: {{ quote .Values.postgresql.service.name }} # {{ include "postgresql.fullname" . }}
+  {{- if not .Values.postgresql.autoscaling.enabled }}
+  replicas: 1
+  {{- end }}
+  minReadySeconds: {{ .Values.postgresql.minReadySeconds }}
+  selector:
+    matchLabels:
+      {{- include "postgresql.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.postgresql.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        eonkube: airbytechart
+        {{- include "postgresql.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "postgresql.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.postgresql.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: change-mode
+          image: busybox
+          command: ["/bin/sh","-c", uidgid={{ .Values.postgresql.securityContext.runAsUser }}:{{ .Values.postgresql.podSecurityContext.fsGroup }} && {{- range .Values.postgresql.volumeMounts }} chown -R $uidgid {{ .mountPath }} && {{- end }} echo "Permissions have been updated."]
+          volumeMounts:
+           {{- range .Values.postgresql.volumeMounts }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+           {{- end }} 
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.postgresql.securityContext | nindent 12 }}
+          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.postgresql.image.pullPolicy }}
+          ports:
+            - name: {{ .Values.postgresql.ports.http.name }}
+              containerPort: {{ .Values.postgresql.ports.http.number }}
+              protocol: TCP
+          # livenessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: {{ .Values.postgresql.ports.http.name }}
+          # readinessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: {{ .Values.postgresql.ports.http.name }}
+          env:
+            {{- toYaml .Values.postgresql.env | nindent 12 }}
+          volumeMounts:
+            {{- toYaml .Values.postgresql.volumeMounts | nindent 12 }}
+          resources:
+            limits:
+            {{- if .Values.postgresql.resources.limits.cpu }}
+              cpu: {{ .Values.postgresql.resources.limits.cpu }}
+            {{- end }}
+            {{- if .Values.postgresql.resources.limits.memory }}
+              memory: {{ .Values.postgresql.resources.limits.memory }}
+            {{- end }}
+            requests:
+            {{- if .Values.postgresql.resources.requests.cpu }}
+              cpu: {{ .Values.postgresql.resources.requests.cpu }}
+            {{- end }}
+            {{- if .Values.postgresql.resources.requests.memory }}
+              memory: {{ .Values.postgresql.resources.requests.memory }}
+            {{- end }}
+      {{- with .Values.postgresql.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.postgresql.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.postgresql.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+  - metadata:
+      labels:
+        eonkube: airbytechart
+      name: {{ .Values.postgresql.volumeClaimTemplates.data.name }}
+    spec:
+      {{- range .Values.postgresql.volumeClaimTemplates.data.accessModes }}
+      accessModes: [ {{ quote . }} ]
+      {{- end }}
+      storageClassName: {{ .Values.postgresql.volumeClaimTemplates.data.storageClassName }}
+      resources:
+        requests:
+          storage: {{ .Values.postgresql.volumeClaimTemplates.data.storageSize }}
+  - metadata:
+      labels:
+        eonkube: airbytechart
+      name: {{ .Values.postgresql.volumeClaimTemplates.config.name }}
+    spec:
+      {{- range .Values.postgresql.volumeClaimTemplates.config.accessModes }}
+      accessModes: [ {{ quote . }} ]
+      {{- end }}
+      storageClassName: {{ .Values.postgresql.volumeClaimTemplates.config.storageClassName }}
+      resources:
+        requests:
+          storage: {{ .Values.postgresql.volumeClaimTemplates.config.storageSize }}

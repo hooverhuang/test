@@ -1,0 +1,34 @@
+{{- if .Values.selfsigned.enabled }}
+{{- $secretTls := default "minio-selfsigned-tls" .Values.selfsigned.certSecret -}}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: minio-selfsigned-tls
+  namespace: {{ .Release.Namespace }}
+  labels:
+    eonkube: airbytechart
+    {{- include "minio.standard.labels" . | nindent 4 }}
+spec:
+  dnsNames:
+    {{ if .Values.console.service.name }}
+    - {{ printf "%s.%s.svc.cluster.local" .Values.console.service.name  .Release.Namespace }}
+    - {{ printf "%s.%s.svc" .Values.console.service.name  .Release.Namespace }}
+    - {{ printf "%s.%s" .Values.console.service.name  .Release.Namespace }}
+    - {{ printf "%s" .Values.console.service.name }}
+    {{ else }}
+    - {{ printf "%s-console.%s.svc.cluster.local" (include "minio.fullname" . ) .Release.Namespace }}
+    - {{ printf "%s-console.%s.svc" (include "minio.fullname" . ) .Release.Namespace }}
+    - {{ printf "%s-console.%s" (include "minio.fullname" . ) .Release.Namespace }}
+    - {{ printf "%s-console" (include "minio.fullname" . ) }}
+    {{ end }}
+    - {{ printf "%s.%s.svc.cluster.local" ( include "minio.fullname" . ) .Release.Namespace }}
+    - {{ printf "%s.%s.svc" ( include "minio.fullname" . ) .Release.Namespace }}
+    - {{ printf "%s.%s" ( include "minio.fullname" . ) .Release.Namespace }}
+    - {{ printf "%s" ( include "minio.fullname" . ) }}
+    - localhost
+  secretName: {{ $secretTls }}
+  issuerRef:
+    name: {{ include "minio.selfSignedIssuer" . }}
+    kind: Issuer
+    group: cert-manager.io
+{{- end }}

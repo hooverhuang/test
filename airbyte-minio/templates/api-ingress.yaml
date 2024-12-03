@@ -1,0 +1,87 @@
+{{- if .Values.api.ingress.enabled -}}
+{{- $fullName := include "minio.fullname" . -}}
+{{- $servicePort := .Values.api.service.port -}}
+{{- $ingressPath := .Values.api.ingress.path -}}
+{{- $defaultSelfSignedCert := .Values.api.ingress.tls.defaultSelfSignedCert -}}
+apiVersion: {{ template "minio.ingress.apiVersion" . }}
+kind: Ingress
+metadata:
+  name: {{ $fullName }}
+  labels: 
+    eonkube: airbytechart
+    {{- include "minio.standard.labels" . | nindent 4 }}
+    {{- with .Values.api.ingress.labels }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations: 
+    {{- if $defaultSelfSignedCert }}
+    {{- include "minio.selfSignedIssuer.annotation" . | nindent 4 }}
+    {{- end }}
+    {{- with .Values.api.ingress.annotations }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.api.ingress.ingressClassName }}
+  ingressClassName: {{ .Values.api.ingress.ingressClassName }}
+  {{- end }}
+  {{- if $defaultSelfSignedCert }}
+  tls:
+    - hosts:
+      - {{ .Values.api.ingress.hosts.host | quote }}
+      {{- if .Values.api.ingress.hosts.extraHosts }}
+      {{- range .Values.api.ingress.hosts.extraHosts }}
+      - {{ . | quote }}
+      {{- end }}
+      {{- end }}
+      secretName: {{ include "minio.selfSignedSecretName" (dict "name" "minio" "component" "api") }}
+  {{- end }}
+  {{- if and .Values.api.ingress.tls.tls (not $defaultSelfSignedCert) }}
+  tls:
+    {{- range .Values.api.ingress.tls.tls }}
+    - hosts:
+      {{- range .hosts }}
+        - {{ . | quote }}
+      {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    - http:
+        paths:
+          - path: {{ $ingressPath }}
+            {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ if .Values.api.service.name }}{{ .Values.api.service.name }}{{ else}}{{ $fullName }}{{ end }}
+                port: 
+                  number: {{ $servicePort }}
+            {{- else }}
+            backend:
+              serviceName: {{ if .Values.api.service.name }}{{ .Values.api.service.name }}{{ else}}{{ $fullName }}{{ end }}
+              servicePort: {{ $servicePort }}
+            {{- end }}
+      host: {{ .Values.api.ingress.hosts.host | quote }}
+    {{- if .Values.api.ingress.hosts.extraHosts }}
+    {{- range .Values.api.ingress.hosts.extraHosts }}
+    - http:
+        paths:
+          - path: {{ $ingressPath }}
+            {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ if .Values.api.service.name }}{{ .Values.api.service.name }}{{ else}}{{ $fullName }}{{ end }}
+                port: 
+                  number: {{ $servicePort }}
+            {{- else }}
+            backend:
+              serviceName: {{ if .Values.api.service.name }}{{ .Values.api.service.name }}{{ else}}{{ $fullName }}{{ end }}
+              servicePort: {{ $servicePort }}
+            {{- end }}
+      {{- if . }}
+      host: {{ tpl . $ | quote }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+{{- end }}

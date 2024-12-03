@@ -1,0 +1,76 @@
+{{- if .Values.postgresql1.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: airbyte-db-svc
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-1"
+  labels:
+    eonkube: airbytechart
+    {{ include "airbyte.databaseLabels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      protocol: TCP
+  selector:
+    {{ include "airbyte.databaseSelectorLabels" . | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: airbyte-db
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-1"
+  labels:
+    eonkube: airbytechart
+    {{ include "airbyte.databaseLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  serviceName: airbyte-db-svc
+  selector:
+    matchLabels:
+      {{ include "airbyte.databaseSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        eonkube: airbytechart
+        {{ include "airbyte.databaseSelectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: airbyte-db-container
+          image: airbyte/db:{{ ((.Values.global.image).tag) | default .Chart.AppVersion }}
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.postgresql1.postgresqlDatabase }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.postgresql1.postgresqlPassword }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgresql1.postgresqlUsername }}
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: airbyte-volume-db
+              mountPath: /var/lib/postgresql/data
+      securityContext: 
+        runAsUser: {{ .Values.postgresql1.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.postgresql1.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.postgresql1.securityContext.fsGroup }}
+  volumeClaimTemplates:
+  - metadata:
+      labels:
+        eonkube: airbytechart
+      name: airbyte-volume-db
+    spec:
+      {{ if ne .Values.postgresql1.storage.storageClassName "" }}
+      storageClassName: {{ .Values.postgresql1.storage.storageClassName }}
+      {{ end }}
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.postgresql1.storage.storageSize }}
+{{- end }}

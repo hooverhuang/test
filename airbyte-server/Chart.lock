@@ -1,0 +1,6 @@
+dependencies:
+- name: common
+  repository: https://charts.infortrend.com
+  version: 2.2.4
+digest: sha256:a8f99f1a587e23fcdc68a07bc262d65be1983ba64d48ad3388620d053158dede
+generated: "2023-04-26T10:32:41.44025474+08:00"

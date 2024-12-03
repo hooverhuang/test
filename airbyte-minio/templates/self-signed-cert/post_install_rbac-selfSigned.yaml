@@ -1,0 +1,56 @@
+{{- $api_tls := and .Values.api.ingress.enabled .Values.api.ingress.tls.defaultSelfSignedCert -}}
+{{- $console_tls := and .Values.console.ingress.enabled .Values.console.ingress.tls.defaultSelfSignedCert -}}
+{{- $defaultSelfSignedCert := or .Values.selfsigned.enabled $api_tls $console_tls }}
+{{- if and $defaultSelfSignedCert .Values.selfSignedJob.serviceAccount.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ template "minio.fullname" . }}-cert-sa
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    eonkube: airbytechart
+    {{- include "minio.standard.labels" . | nindent 4 }}
+  annotations:
+    namespace: {{ .Release.Namespace }}
+    "helm.sh/hook": post-delete
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ template "minio.fullname" . }}-cert-role
+  namespace: {{ .Release.Namespace }}
+  labels:
+    eonkube: airbytechart
+    {{- include "minio.standard.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-delete
+    "helm.sh/hook-weight": "-4"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+rules:
+- apiGroups: ["cert-manager.io"]
+  resources: ["*"]
+  verbs: ["get", "list", "update", "create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ template "minio.fullname" . }}-cert-rolebinding
+  namespace: {{ $.Release.Namespace }}
+  labels: 
+    eonkube: airbytechart
+    {{- include "minio.standard.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-delete
+    "helm.sh/hook-weight": "-4"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ template "minio.fullname" . }}-cert-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ template "minio.fullname" . }}-cert-sa
+    namespace: {{ .Release.Namespace }}
+{{- end }}

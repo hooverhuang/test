@@ -1,0 +1,17 @@
+{{- if .Values.defaulSetting.svcacct.enabled}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: init-accesskey-secret
+  labels: 
+    eonkube: airbytechart
+    {{- include "minio.standard.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "-5"
+type: Opaque
+data:
+  # random generated accesskey and secretkey    
+  accesskey: {{ randAlphaNum 20 | b64enc | quote }}
+  secretkey: {{ randAlphaNum 20 | b64enc | quote }}
+{{- end }}

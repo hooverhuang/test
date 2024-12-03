@@ -1,0 +1,85 @@
+{{- if .Values.console.ingress.enabled -}}
+{{- $fullName := printf "%s-console" (include "minio.fullname" .) -}}
+{{- $servicePort := .Values.console.service.port -}}
+{{- $ingressPath := .Values.console.ingress.path -}}
+{{- $defaultSelfSignedCert := .Values.console.ingress.tls.defaultSelfSignedCert -}}
+apiVersion: {{ template "minio.consoleIngress.apiVersion" . }}
+kind: Ingress
+metadata:
+  name: {{ $fullName }}
+  labels: 
+    eonkube: airbytechart
+    {{- include "minio.standard.labels" . | nindent 4 }}
+    {{- with .Values.console.ingress.labels }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if $defaultSelfSignedCert }}
+      {{- include "minio.selfSignedIssuer.annotation" . | nindent 4 }}
+    {{- end }}
+    {{- with .Values.console.ingress.annotations }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.console.ingress.ingressClassName }}
+  ingressClassName: {{ .Values.console.ingress.ingressClassName }}
+  {{- end }}
+  {{- if $defaultSelfSignedCert }}
+  tls:
+    - hosts:
+        - {{ .Values.console.ingress.hosts.host | quote }}
+        {{- range .Values.console.ingress.hosts.extraHosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ include "minio.selfSignedSecretName" (dict "name" "minio" "component" "console") }}
+  {{- end }}
+  {{- if and .Values.console.ingress.tls.tls not ( $defaultSelfSignedCert ) }}
+  tls:
+    {{- range .Values.console.ingress.tls.tls }}
+    - hosts:
+      {{- range .hosts }}
+        - {{ . | quote }}
+      {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    - http:
+        paths:
+          - path: {{ $ingressPath }}
+            {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ if .Values.console.service.name }}{{ .Values.console.service.name }}{{ else}}{{ $fullName }}{{ end }}
+                port: 
+                  number: {{ $servicePort }}
+            {{- else }}
+            backend:
+              serviceName: {{ if .Values.console.service.name }}{{ .Values.console.service.name }}{{ else}}{{ $fullName }}{{ end }}
+              servicePort: {{ $servicePort }}
+            {{- end }}      
+      host: {{ .Values.console.ingress.hosts.host | quote }}
+    {{- if .Values.console.ingress.hosts.extraHosts }}
+    {{- range .Values.console.ingress.hosts.extraHosts }}
+    - http:
+       paths:
+        - path: {{ $ingressPath }}
+          {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+          pathType: Prefix
+          backend:
+            service:
+              name: {{ if .Values.console.service.name }}{{ .Values.console.service.name }}{{ else}}{{ $fullName }}{{ end }}
+              port: 
+                number: {{ $servicePort }}
+          {{- else }}
+          backend:
+            serviceName: {{ if .Values.console.service.name }}{{ .Values.console.service.name }}{{ else}}{{ $fullName }}{{ end }}
+            servicePort: {{ $servicePort }}
+          {{- end }}
+      {{- if . }}
+      host: {{ tpl . $ | quote }} 
+      {{- end }}     
+    {{- end }}
+    {{- end }}
+{{- end }}

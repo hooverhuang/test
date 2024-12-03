@@ -1,0 +1,284 @@
+{{- if or .Values.buckets .Values.defaulSetting.bucket.enabled .Values.defaulSetting.svcacct.enabled .Values.users .Values.policies .Values.customCommands .Values.svcaccts  }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-post-setting-job
+  labels:
+    eonkube: airbytechart
+    {{- include "minio.standard.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
+    {{- with .Values.postJob.annotations }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  template:
+    metadata:
+      labels:
+        eonkube: airbytechart
+        {{- include "minio.standard.labels" . | nindent 8 }}
+        {{- if .Values.podLabels }}
+          {{- toYaml .Values.podLabels | nindent 8 }}
+        {{- end }}
+      {{- if .Values.postJob.podAnnotations }}
+      annotations: {{- toYaml .Values.postJob.podAnnotations | nindent 8 }}
+      {{- end }}
+    spec:
+      restartPolicy: OnFailure
+      {{- include "minio.imagePullSecrets" . | indent 6 }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- toYaml .Values.postJob.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- with .Values.postJob.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.postJob.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.postJob.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ .Values.postJob.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.postJob.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.postJob.securityContext.fsGroup }}
+      {{- end }}
+      volumes:
+        - name: etc-path
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+        - name: minio-configuration
+          projected:
+            sources:
+              - configMap:
+                  name: {{ template "minio.fullname" . }}
+              - secret:
+                  name: {{ template "minio.secretName" . }}
+              {{- if .Values.defaulSetting.svcacct.enabled }}
+              - secret:
+                  name: init-accesskey-secret
+                  items:
+                    - key: accesskey
+                      path: secrets/defaulSetting/accesskey
+                    - key: secretkey
+                      path: secrets/defaulSetting/secretkey
+              {{- end }}
+              {{- range (concat .Values.users (default (list) .Values.svcaccts)) }}
+              {{- if .existingSecret }}
+              - secret:
+                  name: {{ tpl .existingSecret $ }}
+                  items:
+                    - key: {{ .existingSecretKey }}
+                      path: secrets/{{ tpl .existingSecret $ }}/{{ tpl .existingSecretKey $ }}
+              {{- end }}
+              {{- end }}
+              {{- range ( default list .Values.svcaccts ) }}
+              {{- if .existingSecret }}
+              - secret:
+                  name: {{ tpl .existingSecret $ }}
+                  items:
+                    - key: {{ .existingSecretKey }}
+                      path: secrets-svc/{{ tpl .existingSecret $ }}/{{ tpl .existingSecretKey $ }}
+              {{- end }}
+              {{- end }}
+        {{- if .Values.tls.enabled }}
+        - name: cert-secret-volume-mc
+          secret:
+            secretName: {{ .Values.tls.certSecret }}
+            items:
+              - key: {{ .Values.tls.publicCrt }}
+                path: CAs/public.crt
+        {{- else if .Values.selfsigned.enabled }}
+        {{- $secretTls := default "minio-selfsigned-tls" .Values.selfsigned.certSecret }}
+        - name: selfsign-tls-volume-mc
+          secret:
+            secretName: {{ $secretTls }}
+            items:
+              - key: {{ .Values.selfsigned.publicCrt }}
+                path: CAs/public.crt
+        {{- end }}
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- end }}
+      containers:
+        {{- if or .Values.buckets .Values.defaulSetting.bucket.enabled }}
+        - name: minio-make-bucket
+          image: "{{ .Values.mcImage.repository }}:{{ .Values.mcImage.tag }}"
+          {{- if .Values.postJob.makeBucket.securityContext.enabled }}
+          securityContext:
+            runAsUser: {{ .Values.postJob.makeBucket.securityContext.runAsUser }}
+            runAsGroup: {{ .Values.postJob.makeBucket.securityContext.runAsGroup }}
+          {{- end }}
+          imagePullPolicy: {{ .Values.mcImage.pullPolicy }}
+          {{- if .Values.postJob.makeBucket.exitCommand }}
+          command: [ "/bin/sh", "-c" ]
+          args: [ "/bin/sh /config/initialize; EV=$?; {{ .Values.postJob.makeBucket.exitCommand }} && exit $EV" ]
+          {{- else }}
+          command: [ "/bin/sh", "/config/initialize" ]
+          {{- end }}
+          env:
+            - name: MINIO_ENDPOINT
+              value: {{ if .Values.api.service.name }}{{ .Values.api.service.name }}{{ else}}{{ printf "%s" (tpl "minio.fullname" .) }}{{ end }}
+            - name: MINIO_PORT
+              value: {{ .Values.api.service.port | quote }}
+          volumeMounts:
+            - name: etc-path
+              mountPath: /etc/minio/mc
+            - name: tmp
+              mountPath: /tmp
+            - name: minio-configuration
+              mountPath: /config
+            {{- if .Values.tls.enabled }}
+            - name: cert-secret-volume-mc
+              mountPath: {{ .Values.configPathmc }}certs
+            {{- else if .Values.selfsigned.enabled }}
+            - name: selfsign-tls-volume-mc
+              mountPath: {{ .Values.configPathmc }}certs
+            {{- end }}
+          resources: {{- toYaml .Values.postJob.makeBucket.resources | nindent 12 }}
+        {{- end }}
+        {{- if .Values.users }}
+        - name: minio-make-user
+          image: "{{ .Values.mcImage.repository }}:{{ .Values.mcImage.tag }}"
+          {{- if .Values.postJob.makeUser.securityContext.enabled }}
+          securityContext:
+            runAsUser: {{ .Values.postJob.makeUser.securityContext.runAsUser }}
+            runAsGroup: {{ .Values.postJob.makeUser.securityContext.runAsGroup }}
+          {{- end }}
+          imagePullPolicy: {{ .Values.mcImage.pullPolicy }}
+          {{- if .Values.postJob.makeUser.exitCommand }}
+          command: [ "/bin/sh", "-c" ]
+          args: [ "/bin/sh /config/add-user; EV=$?; {{ .Values.postJob.makeUser.exitCommand }} && exit $EV" ]
+          {{- else }}
+          command: [ "/bin/sh", "/config/add-user" ]
+          {{- end }}
+          env:
+            - name: MINIO_ENDPOINT
+              value: {{ if .Values.api.service.name }}{{ .Values.api.service.name }}{{ else}}{{ printf "%s" (tpl "minio.fullname" .) }}{{ end }}
+            - name: MINIO_PORT
+              value: {{ .Values.api.service.port | quote }}
+          volumeMounts:
+            - name: etc-path
+              mountPath: /etc/minio/mc
+            - name: tmp
+              mountPath: /tmp
+            - name: minio-configuration
+              mountPath: /config
+            {{- if .Values.tls.enabled }}
+            - name: cert-secret-volume-mc
+              mountPath: {{ .Values.configPathmc }}certs
+            {{- else if .Values.selfsigned.enabled }}
+            - name: selfsign-tls-volume-mc
+              mountPath: {{ .Values.configPathmc }}certs
+            {{- end }}
+          resources: {{- toYaml .Values.postJob.makeUser.resources | nindent 12 }}
+        {{- end }}
+        {{- if .Values.policies }}
+        - name: minio-make-policy
+          image: "{{ .Values.mcImage.repository }}:{{ .Values.mcImage.tag }}"
+          {{- if .Values.postJob.makePolicy.securityContext.enabled }}
+          securityContext:
+            runAsUser: {{ .Values.postJob.makePolicy.securityContext.runAsUser }}
+            runAsGroup: {{ .Values.postJob.makePolicy.securityContext.runAsGroup }}
+          {{- end }}
+          imagePullPolicy: {{ .Values.mcImage.pullPolicy }}
+          {{- if .Values.postJob.makePolicy.exitCommand }}
+          command: [ "/bin/sh", "-c" ]
+          args: [ "/bin/sh /config/add-policy; EV=$?; {{ .Values.postJob.makePolicy.exitCommand }} && exit $EV" ]
+          {{- else }}
+          command: [ "/bin/sh", "/config/add-policy" ]
+          {{- end }}
+          env:
+            - name: MINIO_ENDPOINT
+              value: {{ if .Values.api.service.name }}{{ .Values.api.service.name }}{{ else}}{{ printf "%s" (tpl "minio.fullname" .) }}{{ end }}
+            - name: MINIO_PORT
+              value: {{ .Values.api.service.port | quote }}
+          volumeMounts:
+            - name: etc-path
+              mountPath: /etc/minio/mc
+            - name: tmp
+              mountPath: /tmp
+            - name: minio-configuration
+              mountPath: /config
+            {{- if .Values.tls.enabled }}
+            - name: cert-secret-volume-mc
+              mountPath: {{ .Values.configPathmc }}certs
+            {{- else if .Values.selfsigned.enabled }}
+            - name: selfsign-tls-volume-mc
+              mountPath: {{ .Values.configPathmc }}certs
+            {{- end }}
+          resources: {{- toYaml .Values.postJob.makePolicy.resources | nindent 12 }}
+        {{- end }}
+        {{- if .Values.customCommands }}
+        - name: minio-custom-command
+          image: "{{ .Values.mcImage.repository }}:{{ .Values.mcImage.tag }}"
+          {{- if .Values.postJob.customCommand.securityContext.enabled }}
+          securityContext:
+            runAsUser: {{ .Values.postJob.customCommand.securityContext.runAsUser }}
+            runAsGroup: {{ .Values.postJob.customCommand.securityContext.runAsGroup }}
+          {{- end }}
+          imagePullPolicy: {{ .Values.mcImage.pullPolicy }}
+          {{- if .Values.postJob.customCommand.exitCommand }}
+          command: [ "/bin/sh", "-c" ]
+          args: [ "/bin/sh /config/custom-command; EV=$?; {{ .Values.postJob.customCommand.exitCommand }} && exit $EV" ]
+          {{- else }}
+          command: [ "/bin/sh", "/config/custom-command" ]
+          {{- end }}
+          env:
+            - name: MINIO_ENDPOINT
+              value: {{ if .Values.api.service.name }}{{ .Values.api.service.name }}{{ else}}{{ printf "%s" (tpl "minio.fullname" .) }}{{ end }}
+            - name: MINIO_PORT
+              value: {{ .Values.api.service.port | quote }}
+          volumeMounts:
+            - name: etc-path
+              mountPath: /etc/minio/mc
+            - name: tmp
+              mountPath: /tmp
+            - name: minio-configuration
+              mountPath: /config
+            {{- if .Values.tls.enabled }}
+            - name: cert-secret-volume-mc
+              mountPath: {{ .Values.configPathmc }}certs
+            {{- else if .Values.selfsigned.enabled }}
+            - name: selfsign-tls-volume-mc
+              mountPath: {{ .Values.configPathmc }}certs
+            {{- end }}
+          resources: {{- toYaml .Values.postJob.customCommand.resources | nindent 12 }}
+        {{- end }}
+        {{- if or .Values.svcaccts .Values.defaulSetting.svcacct }}
+        - name: minio-make-svcacct
+          image: "{{ .Values.mcImage.repository }}:{{ .Values.mcImage.tag }}"
+          {{- if .Values.postJob.makeServiceAccount.securityContext.enabled }}
+          securityContext:
+            runAsUser: {{ .Values.postJob.makeServiceAccount.securityContext.runAsUser }}
+            runAsGroup: {{ .Values.postJob.makeServiceAccount.securityContext.runAsGroup }}
+          {{- end }}
+          imagePullPolicy: {{ .Values.mcImage.pullPolicy }}
+          {{- if .Values.postJob.makeServiceAccount.exitCommand }}
+          command: [ "/bin/sh", "-c" ]
+          args: ["/bin/sh /config/add-svcacct; EV=$?; {{ .Values.postJob.makeServiceAccount.exitCommand }} && exit $EV" ]
+          {{- else }}
+          command: ["/bin/sh", "/config/add-svcacct"]
+          {{- end }}
+          env:
+            - name: MINIO_ENDPOINT
+              value: {{ if .Values.api.service.name }}{{ .Values.api.service.name }}{{ else}}{{ printf "%s" (tpl "minio.fullname" .) }}{{ end }}
+            - name: MINIO_PORT
+              value: {{ .Values.api.service.port | quote }}
+          volumeMounts:
+            - name: etc-path
+              mountPath: /etc/minio/mc
+            - name: tmp
+              mountPath: /tmp
+            - name: minio-configuration
+              mountPath: /config
+            {{- if .Values.tls.enabled }}
+            - name: cert-secret-volume-mc
+              mountPath: {{ .Values.configPathmc }}certs
+            {{- else if .Values.selfsigned.enabled }}
+            - name: selfsign-tls-volume-mc
+              mountPath: {{ .Values.configPathmc }}certs
+            {{- end }}
+          resources: {{- toYaml .Values.postJob.makeServiceAccount.resources | nindent 12 }}
+        {{- end }}
+{{- end }}

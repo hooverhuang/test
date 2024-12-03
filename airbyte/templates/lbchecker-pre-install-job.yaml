@@ -1,0 +1,44 @@
+{{- if eq  .Values.webapp.service.type "LoadBalancer" }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name:  {{ .Release.Name }}-pre-install
+  labels:
+    eonkube: airbytechart
+    {{- include "airbyte.labels" . |nindent 4}}
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "-2"
+    #helm.sh/hook-delete-policy": hook-succeeded
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    #"helm.sh/resource-policy": keep
+spec:
+  ttlSecondsAfterFinished: 100
+  template:
+    metadata:
+      name: "{{ .Release.Name }}"
+      labels:
+        eonkube: airbytechart
+        app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+        app.kubernetes.io/instance: {{ .Release.Name | quote }}
+        helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    spec:
+      #hostNetwork: true
+      restartPolicy: Never
+      serviceAccountName: {{ printf "%s-%s-lbchecker-sa" .Release.Name .Release.Namespace }}
+      containers:
+      - name: pre-install-job
+        image: {{ .Values.hooks.image }}
+        imagePullPolicy: {{ .Values.hooks.imagePullPolicy }}
+        {{- if .Values.webapp.service.vipSharingEnabled }}
+        command: ["/usr/local/bin/lbchecker","--vip","{{ .Values.webapp.service.loadbalancerip }}","--sharekey","True"]
+        {{- else }}
+        command: ["/usr/local/bin/lbchecker","--vip","{{ .Values.webapp.service.loadbalancerip }}","--sharekey","False"]
+        {{- end }}
+        tty: true
+        securityContext:
+          runAsUser: 0
+          #privileged: true
+  backoffLimit: 2
+  #activeDeadlineSeconds: 20
+{{- end }}

@@ -1,0 +1,23 @@
+{{- if .Values.networkPolicy.enabled }}
+kind: NetworkPolicy
+apiVersion: {{ template "minio.networkPolicy.apiVersion" . }}
+metadata:
+  name: {{ template "minio.fullname" . }}
+  labels: 
+    eonkube: airbytechart
+    {{- include "minio.standard.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "minio.selector.labels" . | nindent 6 }}
+  ingress:
+    - ports:
+        - port: {{ .Values.minioAPIPort }}
+        - port: {{ .Values.minioConsolePort }}
+      {{- if not .Values.networkPolicy.allowExternal }}
+      from:
+        - podSelector:
+            matchLabels:
+              {{ template "minio.name" . }}-client: "true"
+      {{- end }}
+{{- end }}

@@ -1,0 +1,45 @@
+{{ $scheme := or .Values.tls.enabled .Values.selfsigned.enabled | ternary "https" "http" }}
+apiVersion: v1
+kind: Service
+metadata:
+  
+  name: {{ if .Values.console.service.name }}{{ .Values.console.service.name }}{{ else}}{{ printf "%s-console" (tpl "minio.fullname" .) }}{{ end }}
+  labels: 
+    eonkube: airbytechart
+    {{- include "minio.standard.labels" . | nindent 4 }}
+  
+  annotations:
+    {{ if and .Values.console.service.vipSharingEnabled .Values.console.service.loadbalancerip }}metallb.universe.tf/allow-shared-ip: {{ printf "key-to-share-%s" .Values.console.service.loadbalancerip | quote }}{{ end }}    
+    {{ if .Values.console.service.dnsEnabled }}external-dns.alpha.kubernetes.io/hostname: {{ .Values.console.service.hostname | quote }}{{ end }} 
+  {{- if .Values.console.service.annotations }}
+  {{- toYaml .Values.console.service.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if (or (eq .Values.console.service.type "ClusterIP" "") (empty .Values.console.service.type)) }}
+  type: ClusterIP
+  {{- if not (empty .Values.console.service.clusterIP) }}
+  clusterIP: {{ .Values.console.service.clusterIP }}
+  {{- end }}
+  {{- else if eq .Values.console.service.type "LoadBalancer" }}
+  type: {{ .Values.console.service.type }}
+  loadBalancerIP: {{ default "" .Values.console.service.loadBalancerIP }}
+  {{- else }}
+  type: {{ .Values.console.service.type }}
+  {{- end }}
+  ports:
+    - name: {{ $scheme }}
+      port: {{ .Values.console.service.port }}
+      protocol: TCP
+      {{- if (and (eq .Values.console.service.type "NodePort") ( .Values.console.service.nodePort)) }}
+      nodePort: {{ .Values.console.service.nodePort }}
+      {{- else }}
+      targetPort: {{ .Values.minioConsolePort }}
+      {{- end }}
+  {{- if .Values.console.service.externalIPs }}
+  externalIPs:
+    {{- range $i , $ip := .Values.console.service.externalIPs }}
+    - {{ $ip }}
+    {{- end }}
+  {{- end }}
+  selector:
+    {{- include "minio.selector.labels" . | nindent 4 }}

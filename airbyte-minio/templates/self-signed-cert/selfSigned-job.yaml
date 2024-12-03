@@ -1,0 +1,92 @@
+{{- $api_tls := and .Values.api.ingress.enabled .Values.api.ingress.tls.defaultSelfSignedCert -}}
+{{- $console_tls := and .Values.console.ingress.enabled .Values.console.ingress.tls.defaultSelfSignedCert -}}
+{{- $defaultSelfSignedCert := or .Values.selfsigned.enabled $api_tls $console_tls }}
+{{- if $defaultSelfSignedCert }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-selfsign-job
+  namespace: {{ .Release.Namespace }}
+  labels:
+    eonkube: airbytechart
+    {{- include "minio.standard.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-3"
+    "helm.sh/hook-delete-policy": hook-succeeded, before-hook-creation
+spec:
+  template:
+    metadata:
+      labels:
+        eonkube: airbytechart
+        {{- include "minio.standard.labels" . | nindent 8 }}
+    spec:
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- toYaml .Values.selfSignedJob.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- with .Values.selfSignedJob.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.selfSignedJob.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.selfSignedJob.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ .Values.selfSignedJob.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.selfSignedJob.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.selfSignedJob.securityContext.fsGroup }}
+      {{- end }}
+      {{- if and $defaultSelfSignedCert .Values.selfSignedJob.serviceAccount.create }}
+      serviceAccountName: {{ template "minio.fullname" . }}-cert-sa
+      {{- end }}
+      restartPolicy: Never
+      volumes:
+        - name: selfsign-cm
+          projected:
+            sources:
+              - configMap:
+                  name: {{ template "minio.fullname" . }}-selfsigned-cm
+      containers:
+        - name: selfsign-issuer
+          image: {{ .Values.selfSignedJob.image.repository }}:{{ .Values.selfSignedJob.image.tag }}
+          imagePullPolicy: {{ .Values.selfSignedJob.image.pullPolicy }}
+          command: 
+            - /bin/sh
+            - -c
+            - kubectl apply -f /tmp/selfsigned-issuer.yaml
+          volumeMounts:
+            - name: selfsign-cm
+              mountPath: /tmp
+        - name: selfsign-certificate
+          image: {{ .Values.selfSignedJob.image.repository }}:{{ .Values.selfSignedJob.image.tag }}
+          imagePullPolicy: {{ .Values.selfSignedJob.image.pullPolicy }}
+          command: 
+            - /bin/sh
+            - -c
+            - kubectl apply -f /tmp/selfsigned-certificate.yaml
+          volumeMounts:
+            - name: selfsign-cm
+              mountPath: /tmp
+        - name: tls-issuer
+          image: {{ .Values.selfSignedJob.image.repository }}:{{ .Values.selfSignedJob.image.tag }}
+          imagePullPolicy: {{ .Values.selfSignedJob.image.pullPolicy }}
+          command: 
+            - /bin/sh
+            - -c
+            - kubectl apply -f /tmp/tls-issuer.yaml
+          volumeMounts:
+            - name: selfsign-cm
+              mountPath: /tmp
+        {{- if .Values.selfsigned.enabled }}
+        - name: selfsign-tls
+          image: {{ .Values.selfSignedJob.image.repository }}:{{ .Values.selfSignedJob.image.tag }}
+          imagePullPolicy: {{ .Values.selfSignedJob.image.pullPolicy }}
+          command: 
+            - /bin/sh
+            - -c
+            - kubectl apply -f /tmp/selfsigned-tls.yaml
+          volumeMounts:
+            - name: selfsign-cm
+              mountPath: /tmp
+        {{- end }}
+{{- end }}

@@ -1,0 +1,56 @@
+{{- if eq .Values.webapp.service.type "LoadBalancer" }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    eonkube: airbytechart
+    app: lbchecker
+  #namespace: lbchecker   # should not set namespace in the helm chart
+  name: {{ printf "%s-%s-lbchecker-sa" .Release.Name .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-rollback,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  labels:
+    eonkube: airbytechart
+    app: lbchecker
+  #namespace: lbchecker   # should not set namespace in the helm chart
+  name: {{ printf "%s-%s-lbchecker-cr" .Release.Name .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-rollback,pre-upgrade
+    "helm.sh/hook-weight": "-4"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["services"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    eonkube: airbytechart
+    app: lbchecker
+  #namespace: lbchecker   # should not set namespace in the helm chart
+  name: {{ printf "%s-%s-lbchecker-crb" .Release.Name .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-rollback,pre-upgrade
+    "helm.sh/hook-weight": "-3"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ printf "%s-%s-lbchecker-cr" .Release.Name .Release.Namespace }}
+subjects:
+- kind: ServiceAccount
+  name: {{ printf "%s-%s-lbchecker-sa" .Release.Name .Release.Namespace }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}

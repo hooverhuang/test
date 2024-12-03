@@ -1,0 +1,39 @@
+dependencies:
+- name: common
+  repository: https://charts.infortrend.com
+  version: 2.2.4
+- name: airbyte-bootloader
+  repository: https://charts.infortrend.com
+  version: 0.45.12
+- name: temporal
+  repository: https://charts.infortrend.com
+  version: 0.45.12
+- name: webapp
+  repository: https://charts.infortrend.com
+  version: 0.45.12
+- name: server
+  repository: https://charts.infortrend.com
+  version: 0.45.12
+- name: worker
+  repository: https://charts.infortrend.com
+  version: 0.45.12
+- name: pod-sweeper
+  repository: https://charts.infortrend.com
+  version: 0.45.12
+- name: metrics
+  repository: https://charts.infortrend.com
+  version: 0.45.12
+- name: cron
+  repository: https://charts.infortrend.com
+  version: 0.45.12
+- name: connector-builder-server
+  repository: https://charts.infortrend.com
+  version: 0.45.12
+- name: postgresql
+  repository: https://charts.infortrend.com
+  version: 1.0.14+up14.2
+- name: minio
+  repository: https://charts.infortrend.com
+  version: 1.0.2+upRELEASE.2023-09-30T07-02-29Z
+digest: sha256:3d545afe6ea0f0aed5a4442ff15b7ba464e414fced8cb2ab807917176deed17d
+generated: "2024-06-28T18:22:28.176656677+08:00"
